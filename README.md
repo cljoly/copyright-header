@@ -14,3 +14,9 @@ Most licenses recommand to add a line with the author name and the years for eac
 >     […]
 
 Maintaining accurate years can be quite tedious to maintain, so this repo contains a script to automate this.
+
+## TODO
+
+- [ ] Scan files
+- [ ] Support more copyright header format
+- [ ] Allow exclusions and tweak
