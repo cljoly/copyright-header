@@ -12,8 +12,8 @@ BEGIN {
 	# Scanning order https://www.gnu.org/software/gawk/manual/html_node/Controlling-Scanning.html
 	# This is enough because all years are the same length ("2XXX")
 	PROCINFO["sorted_in"] = "@ind_num_asc"
-    # Used to separate copyright years as well
-    FS="[, ]"
+	# Used to separate copyright years as well
+	FS = "[, ]"
 }
 
 BEGINFILE {
@@ -31,10 +31,7 @@ BEGINFILE {
 	}
 	close(git_blame)
 	for (author in git_file_authors) {
-		print author " (C) " format_years(git_file_authors[author])
-		for (year in git_file_authors[author]) {
-			print "Year: " year
-		}
+		print "Copyright (C) " author " " format_years(git_file_authors[author])
 	}
 }
 
@@ -44,31 +41,19 @@ ENDFILE {
 }
 
 
-# [2018,2020,2021,2022] -> "2018, 2020-2022"
+# Supports only full enumeration of copyright years, since
+# https://www.gnu.org/licenses/gpl-howto.html#copyright-notice recommands to use
+# a range only if its use is documented
 function format_years(years_array)
 {
-	prev_year = 0
 	formatted = ""
+	prev_year = 0
 	for (year in years_array) {
-		switch (formatted) {
-		case /-$/:
-			if (year != prev_year + 1) {
-				formatted = formatted prev_year ", "
-			}
-		default:
-			if (year != prev_year + 1) {
-				formatted = formatted prev_year ", "
-			} else {
-				formatted = formatted prev_year "-"
-			}
+		if (prev_year) {
+			formatted = formatted prev_year ", "
 		}
 		prev_year = year
 	}
-	# Take care of the last one
-	if (formatted ~ /-$/) {
-		formatted = formatted prev_year
-	} else {
-		formatted = formatted prev_year
-	}
+    formatted = formatted prev_year
 	return formatted
 }
