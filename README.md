@@ -15,6 +15,8 @@ Most licenses recommand to add a line with the author name and the years for eac
 
 Maintaining accurate years can be quite tedious to maintain, so this repo contains a script to automate this.
 
+The output can be use as a quickfix list in vim, to jump to all the places where the headers need to be tweaked.
+
 ## TODO
 
 - [ ] Scan files

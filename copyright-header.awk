@@ -19,10 +19,25 @@ BEGIN {
 BEGINFILE {
 	git_blame = "git blame --porcelain -- '" FILENAME "'"
 	while ((git_blame | getline) > 0) {
+		# End of commit commit header (i.e. we have a line starting with tab)
+		if (match($0, /^\t/)) {
+			skip = 0
+			continue
+		}
+		# Skip current commit header
+		if (skip) {
+			continue
+		}
 		# This relies on encountering the author before the year, which
 		# should always happen
 		if (match($0, /^author /)) {
 			git_last_author = substr($0, RLENGTH + 1)
+			if (git_last_author == "Not Committed Yet") {
+				skip = 1
+				print FILENAME "|1| Uncommitted changes"
+				invalid_lines++
+				continue
+			}
 		}
 		if (match($0, /^author-time /)) {
 			git_file_authors[git_last_author][strftime("%Y", substr($0, RLENGTH))] = 1
@@ -55,6 +70,16 @@ match($0, /[Cc]opyright (\([cC]\)|\302\251)?/) {
 	# Check that the years are the same and if so, mark the author as properly
 	# credited
 	expected_years = length(git_file_authors[author_name])
+	if (expected_years == 0) {
+		print FILENAME "|" FNR "| No years on record for '" author_name "'"
+		invalid_lines++
+		delete git_file_authors[author_name]
+	}
+	if (length(author_name) == 0 || length(git_file_authors[author_name]) == 0) {
+		print FILENAME "|" FNR "| Invalid author name '" author_name "'"
+		invalid_lines++
+		delete git_file_authors[author_name]
+	}
 	if (expected_years == length(years)) {
 		all_equal = 1
 		for (y in git_file_authors[author_name]) {
@@ -64,21 +89,23 @@ match($0, /[Cc]opyright (\([cC]\)|\302\251)?/) {
 			}
 		}
 		if (! all_equal) {
-			print FILENAME "|" FNR "| Unexpected years, should be 'Copyright (C) " format_years(git_file_authors[author]) " " author "'"
+			print FILENAME "|" FNR "| Unexpected years, should be 'Copyright (C) " format_years(git_file_authors[author_name]) " " author_name "'"
 			invalid_lines++
 		}
 		delete git_file_authors[author_name]
 	}
 	if (expected_years < length(years)) {
-		print FILENAME "|" FNR "| Too few years, should be 'Copyright (C) " format_years(git_file_authors[author]) " " author "'"
+		print FILENAME "|" FNR "| Too many years, should be 'Copyright (C) " format_years(git_file_authors[author_name]) " " author_name "', got '" $0 "'"
 		invalid_lines++
 		delete git_file_authors[author_name]
 	}
 	if (expected_years > length(years)) {
-		print FILENAME "|" FNR "| Too many years, should be 'Copyright (C) " format_years(git_file_authors[author]) " " author "'"
+		print FILENAME "|" FNR "| Too few years, should be 'Copyright (C) " format_years(git_file_authors[author_name]) " " author_name "', got '" $0 "'"
 		invalid_lines++
 		delete git_file_authors[author_name]
 	}
+	# Clear variables
+	delete years
 }
 
 ENDFILE {
@@ -104,7 +131,8 @@ END {
 # Supports only full enumeration of copyright years, since
 # https://www.gnu.org/licenses/gpl-howto.html#copyright-notice recommands to use
 # a range only if its use is documented
-function format_years(years_array)
+#                                | local variables (spaces removed by formatter)
+function format_years(years_array, formatted, prev_year)
 {
 	formatted = ""
 	prev_year = 0
