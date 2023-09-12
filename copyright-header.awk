@@ -17,33 +17,7 @@ BEGIN {
 }
 
 BEGINFILE {
-	git_blame = "git blame --porcelain -- '" FILENAME "'"
-	while ((git_blame | getline) > 0) {
-		# End of commit commit header (i.e. we have a line starting with tab)
-		if (match($0, /^\t/)) {
-			skip = 0
-			continue
-		}
-		# Skip current commit header
-		if (skip) {
-			continue
-		}
-		# This relies on encountering the author before the year, which
-		# should always happen
-		if (match($0, /^author /)) {
-			git_last_author = substr($0, RLENGTH + 1)
-			if (git_last_author == "Not Committed Yet") {
-				skip = 1
-				print FILENAME "|1| Uncommitted changes"
-				invalid_lines++
-				continue
-			}
-		}
-		if (match($0, /^author-time /)) {
-			git_file_authors[git_last_author][strftime("%Y", substr($0, RLENGTH))] = 1
-		}
-	}
-	close(git_blame)
+	fill_global_git_state()
 }
 
 # Copyright line format follows this recommandation:
@@ -128,10 +102,46 @@ END {
 }
 
 
+# Fills a global state inferred from git infos.
+# Fills the following global variables:
+# * git_file_authors
+# * invalid_lines
+#                              | local variables (spaces removed by formatter)
+function fill_global_git_state(git_blame, skip, git_last_author)
+{
+	git_blame = "git blame --porcelain -- '" FILENAME "'"
+	while ((git_blame | getline) > 0) {
+		# End of commit commit header (i.e. we have a line starting with tab)
+		if (match($0, /^\t/)) {
+			skip = 0
+			continue
+		}
+		# Skip current commit header
+		if (skip) {
+			continue
+		}
+		# This relies on encountering the author before the year, which
+		# should always happen
+		if (match($0, /^author /)) {
+			git_last_author = substr($0, RLENGTH + 1)
+			if (git_last_author == "Not Committed Yet") {
+				skip = 1
+				print FILENAME "|1| Uncommitted changes"
+				invalid_lines++
+				continue
+			}
+		}
+		if (match($0, /^author-time /)) {
+			git_file_authors[git_last_author][strftime("%Y", substr($0, RLENGTH))] = 1
+		}
+	}
+	close(git_blame)
+}
+
 # Supports only full enumeration of copyright years, since
 # https://www.gnu.org/licenses/gpl-howto.html#copyright-notice recommands to use
 # a range only if its use is documented
-#                                | local variables (spaces removed by formatter)
+#                                | local variables
 function format_years(years_array, formatted, prev_year)
 {
 	formatted = ""
