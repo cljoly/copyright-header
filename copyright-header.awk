@@ -90,7 +90,6 @@ ENDFILE {
 		invalid_lines++
 	}
 	# Clear variables
-	git_last_author = ""
 	delete git_file_authors
 }
 
