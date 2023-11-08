@@ -22,3 +22,8 @@ The output can be use as a quickfix list in vim, to jump to all the places where
 - [ ] Scan files
 - [ ] Support more copyright header format
 - [ ] Allow exclusions and tweak
+
+## More mature projects
+
+* https://github.com/fsfe/reuse-tool
+* https://github.com/google/addlicense/
